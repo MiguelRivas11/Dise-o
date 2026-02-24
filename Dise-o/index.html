@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portafolio 3D | Miguel Rivas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: white;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            transition: 0.3s;
+            border-color: #3b82f6;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="p-6 flex justify-between items-center max-w-6xl mx-auto">
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+            MARG.dev
+        </h1>
+        <div class="space-x-6 hidden md:block">
+            <a href="#proyectos" class="hover:text-blue-400">Diseño 3D</a>
+            <a href="#skills" class="hover:text-blue-400">Skills</a>
+        </div>
+    </nav>
+
+    <section class="max-w-6xl mx-auto px-6 py-20 text-center md:text-left flex flex-col md:flex-row items-center">
+        <div class="md:w-2/3">
+            <h2 class="text-5xl font-extrabold mb-4">Miguel Angel Rivas Garcia</h2>
+            <p class="text-xl text-gray-400 mb-6">Ingeniería en Computación </p>
+            <p class="text-gray-300 max-w-lg">Bienvenido a mi entorno de portafolio</p>
+        </div>
+    </section>
+
+    <section id="proyectos" class="max-w-6xl mx-auto px-6 py-10">
+        <h3 class="text-3xl font-bold mb-10 border-l-4 border-blue-500 pl-4">Prácticas Three.js</h3>
+
+        <div class="grid md:grid-cols-2 gap-8">
+
+            <a href="practica1.html" class="block">
+                <div class="glass p-6 rounded-2xl card h-full">
+                    <div class="h-40 bg-gray-800 rounded-xl mb-4 flex items-center justify-center text-4xl">🟢🔺</div>
+                    <h4 class="text-xl font-bold mb-2 text-blue-400">01. Escena Básica (Main.js)</h4>
+                    <p class="text-gray-400">Renderizado de un cubo verde y un prisma rosa rotando. Implementación
+                        modular con ES6.</p>
+                </div>
+            </a>
+
+            <a href="cubobaasic.html" class="block">
+                <div class="glass p-6 rounded-2xl card h-full">
+                    <div class="h-40 bg-gray-800 rounded-xl mb-4 flex items-center justify-center text-4xl">🎨🧊</div>
+                    <h4 class="text-xl font-bold mb-2 text-purple-400">02. Cubo Multicolor & Luces</h4>
+                    <p class="text-gray-400">Geometría con materiales sólidos (Phong), iluminación direccional y sombras
+                        activadas.</p>
+                </div>
+            </a>
+
+            <a href="practica_gltf.html" class="block">
+                <div class="glass p-6 rounded-2xl card h-full">
+                    <div class="h-40 bg-gray-800 rounded-xl mb-4 flex items-center justify-center text-4xl">🤖📦</div>
+                    <h4 class="text-xl font-bold mb-2 text-orange-400">03. Carga de Modelos GLTF</h4>
+                    <p class="text-gray-400">Importación de archivos .glb, uso de GLTFLoader y manipulación de
+                        materiales con traverse().</p>
+                </div>
+            </a>
+
+        </div>
+    </section>
+
+    <footer class="text-center py-10 text-gray-600 text-sm">
+        © 2026 Miguel Rivas
+    </footer>
+</body>
+
+</html>

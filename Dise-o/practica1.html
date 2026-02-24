@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js ES6 con Import Map</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/examples/jsm/controls/OrbitControls": "https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js"
+            }
+        }
+    </script>
+      <!-- preguntassssssssssssssssss
+        //Qué es OrbitControls? Es un complemento que permite al usuario controlar la cámara con el mouse: rotar (clic izquierdo), hacer zoom (rueda) y desplazarse (clic derecho) alrededor de un objetivo.
+        //¿Cómo importarlo? Necesitas un script adicional.
+        //<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"//
+        //En JavaScript (antes de la función animate):
+        //enableDamping = true: Agrega inercia para que el movimiento sea suave (como si tuviera peso).
+        //dampingFactor = 0.05: Ajusta qué tan rápido se frena esa inercia.
+        //autoRotate = true: La cámara gira automáticamente alrededor de la escena.
+        //minDistance / maxDistance: Limita cuánto puedes acercarte o alejarte. -->
+</head>
+<body>
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
