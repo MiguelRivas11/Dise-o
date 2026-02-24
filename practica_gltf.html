@@ -78,8 +78,21 @@
 
         // Configuración apuntando a tu AnimatedCube
         const configModels = [
-            { path: './models/AnimatedCube.gltf', x: -2, scale: 1.5 },
-            { path: './models/AnimatedTriangle.gltf', x: 2, scale: 1.5 } // <-- Tu nuevo modelo
+            {
+                path: './models/AnimatedCube.gltf',
+                x: -3, // Izquierda 
+                scale: 1.5
+            },
+            {
+                path: './models/AnisotropyBarnLamp.gltf',
+                x: 0,  // Centro
+                scale: 1.0 // Puedes subir o bajar este número si la lámpara se ve muy grande o pequeña
+            },
+            {
+                path: './models/AnimatedTriangle.gltf',
+                x: 3,  // Derecha
+                scale: 1.5
+            }
         ];
 
         configModels.forEach(data => {
