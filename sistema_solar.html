@@ -176,13 +176,13 @@
     </style>
 </head>
 <body>
-    <div class="title">🪐 Sistema Solar</div>
+    <div class="title">Sistema Solar</div>
 
     <!-- Panel de Controles -->
     <div class="controls-panel">
-        <h2>⚙️ Controles</h2>
+        <h2> Controles</h2>
         
-        <button id="pauseBtn">⏸️ Pausar Animación</button>
+        <button id="pauseBtn"> Pausar Animación</button>
         
         <div class="control-group">
             <label for="speedSlider">Velocidad de Simulación</label>
@@ -190,26 +190,26 @@
             <div class="speed-display">1.0x</div>
         </div>
 
-        <button id="toggleOrbits" class="toggle-btn">👁️ Mostrar Órbitas</button>
+        <button id="toggleOrbits" class="toggle-btn"> Mostrar Órbitas</button>
         
         <div class="control-group">
-            <label>🎯 Ir a Planeta</label>
+            <label> Ir a Planeta</label>
             <select id="planetSelect" style="width: 100%; padding: 8px; border-radius: 5px; background: #333; color: white; border: 1px solid #4a90e2;">
                 <option value="">Seleccionar...</option>
             </select>
         </div>
     </div>
 
-    <!-- Instrucciones -->
+    
     <div class="instructions">
         <h4>📋 Instrucciones</h4>
-        🖱️ Click izquierdo + arrastrar: Rotar<br>
-        🖱️ Click derecho + arrastrar: Mover<br>
-        🔍 Rueda del mouse: Zoom<br>
-        🪐 Click en planeta: Ver info
+         Click izquierdo + arrastrar: Rotar<br>
+         Click derecho + arrastrar: Mover<br>
+         Rueda del mouse: Zoom<br>
+         Click en planeta: Ver info
     </div>
 
-    <!-- Panel de Información -->
+   
     <div class="info-panel" id="infoPanel">
         <div class="close-btn" id="closeInfo">×</div>
         <h3 id="planetName">Planeta</h3>
@@ -229,9 +229,6 @@
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-        // ============================================
-        // CONFIGURACIÓN BÁSICA
-        // ============================================
         
         const scene = new THREE.Scene();
         
@@ -250,22 +247,19 @@
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         document.body.appendChild(renderer.domElement);
 
-        // Controles de cámara
+        
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
         controls.minDistance = 10;
         controls.maxDistance = 500;
 
-        // Reloj para animación basada en tiempo
+        
         const clock = new THREE.Clock();
         let isPaused = false;
         let simulationSpeed = 1.0;
 
-        // ============================================
-        // FONDO ESPACIAL (SKYBOX)
-        // ============================================
-        
+       
         const createStarfield = () => {
             const starsGeometry = new THREE.BufferGeometry();
             const starCount = 10000;
@@ -290,9 +284,6 @@
 
         createStarfield();
 
-        // ============================================
-        // DATOS DE LOS PLANETAS
-        // ============================================
         
         const planetData = {
             mercury: {
@@ -393,9 +384,6 @@
             }
         };
 
-        // ============================================
-        // GENERADOR DE TEXTURAS PROCEDURALES
-        // ============================================
         
         const createPlanetTexture = (color1, color2 = null, pattern = 'noise') => {
             const canvas = document.createElement('canvas');
@@ -403,12 +391,12 @@
             canvas.height = 512;
             const ctx = canvas.getContext('2d');
 
-            // Llenar con color base
+            
             ctx.fillStyle = color1;
             ctx.fillRect(0, 0, 512, 512);
 
             if (pattern === 'noise') {
-                // Ruido para Mercurio, Tierra, etc.
+               
                 for (let i = 0; i < 1000; i++) {
                     const x = Math.random() * 512;
                     const y = Math.random() * 512;
@@ -419,7 +407,7 @@
                 }
                 ctx.globalAlpha = 1;
             } else if (pattern === 'bands') {
-                // Bandas para Júpiter y Saturno
+                
                 const bandHeight = 512 / 8;
                 for (let i = 0; i < 8; i++) {
                     if (i % 2 === 0) {
@@ -428,7 +416,7 @@
                     }
                 }
             } else if (pattern === 'gradiente') {
-                // Gradiente para otros planetas
+                
                 const gradient = ctx.createLinearGradient(0, 0, 512, 512);
                 gradient.addColorStop(0, color1);
                 gradient.addColorStop(1, color2 || color1);
@@ -440,9 +428,6 @@
             return texture;
         };
 
-        // ============================================
-        // CREAR EL SOL
-        // ============================================
         
         const textureLoader = new THREE.TextureLoader();
         
@@ -457,7 +442,7 @@
         const sun = new THREE.Mesh(sunGeometry, sunMaterial);
         scene.add(sun);
 
-        // Agregar glow al Sol
+        
         const glowGeometry = new THREE.SphereGeometry(12, 64, 64);
         const glowMaterial = new THREE.MeshBasicMaterial({
             color: 0xffaa00,
@@ -467,7 +452,7 @@
         const sunGlow = new THREE.Mesh(glowGeometry, glowMaterial);
         scene.add(sunGlow);
 
-        // Luz puntual en el Sol
+        
         const sunLight = new THREE.PointLight(0xffffff, 3, 2000);
         sunLight.position.set(0, 0, 0);
         sunLight.castShadow = true;
@@ -475,28 +460,25 @@
         sunLight.shadow.mapSize.height = 2048;
         scene.add(sunLight);
 
-        // Luz ambiental más fuerte
+        
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
 
-        // Luz direccional adicional para asegurar visibilidad
+        
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(50, 50, 50);
         scene.add(directionalLight);
 
-        // ============================================
-        // CREAR PLANETAS CON SISTEMA JERÁRQUICO
-        // ============================================
         
         const planets = [];
         const orbitLines = [];
 
         const createPlanet = (data) => {
-            // Contenedor de órbita (para traslación)
+            
             const orbitContainer = new THREE.Object3D();
             scene.add(orbitContainer);
 
-            // Crear línea de órbita
+            
             const orbitGeometry = new THREE.BufferGeometry();
             const orbitPoints = [];
             const segments = 128;
@@ -523,13 +505,13 @@
 
             const orbitLine = new THREE.Line(orbitGeometry, orbitMaterial);
             scene.add(orbitLine);
-            orbitLine.visible = true; // Inicialmente visible
+            orbitLine.visible = true;
             orbitLines.push(orbitLine);
 
-            // Crear el planeta
+           
             const planetGeometry = new THREE.SphereGeometry(data.radius, 64, 64);
             
-            // Generar textura procedural
+            
             const planetTexture = createPlanetTexture(data.textureColor1, data.textureColor2, data.pattern);
             
             const planetMaterial = new THREE.MeshStandardMaterial({
@@ -548,7 +530,7 @@
             
             orbitContainer.add(planet);
 
-            // Anillos de Saturno
+            
             if (data.name === 'Saturno') {
                 const ringGeometry = new THREE.RingGeometry(
                     data.radius * 1.5,
@@ -577,15 +559,12 @@
             };
         };
 
-        // Crear todos los planetas
+        
         Object.values(planetData).forEach(data => {
             planets.push(createPlanet(data));
         });
 
-        // ============================================
-        // RAYCASTER PARA INTERACCIONES
-        // ============================================
-        
+      
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
@@ -610,10 +589,7 @@
 
         window.addEventListener('click', onPlanetClick);
 
-        // ============================================
-        // UI - PANEL DE INFORMACIÓN
-        // ============================================
-        
+       
         const infoPanel = document.getElementById('infoPanel');
         const planetName = document.getElementById('planetName');
         const planetInfo = document.getElementById('planetInfo');
@@ -629,11 +605,7 @@
             infoPanel.classList.remove('active');
         });
 
-        // ============================================
-        // UI - CONTROLES DE SIMULACIÓN
-        // ============================================
-        
-        // Pausar/Reanudar
+       
         const pauseBtn = document.getElementById('pauseBtn');
         pauseBtn.addEventListener('click', () => {
             isPaused = !isPaused;
@@ -641,7 +613,7 @@
             pauseBtn.classList.toggle('paused');
         });
 
-        // Control de velocidad
+        
         const speedSlider = document.getElementById('speedSlider');
         const speedDisplay = document.querySelector('.speed-display');
         
@@ -650,7 +622,7 @@
             speedDisplay.textContent = `${simulationSpeed.toFixed(1)}x`;
         });
 
-        // Mostrar/ocultar órbitas
+       
         const toggleOrbitsBtn = document.getElementById('toggleOrbits');
         let orbitsVisible = true;
         
@@ -663,7 +635,7 @@
             toggleOrbitsBtn.textContent = orbitsVisible ? '👁️ Mostrar Órbitas' : '🚫 Ocultar Órbitas';
         });
 
-        // Selector de planetas
+        
         const planetSelect = document.getElementById('planetSelect');
         
         planets.forEach((planetObj, index) => {
@@ -678,8 +650,7 @@
                 const planetObj = planets[parseInt(e.target.value)];
                 const planetWorldPos = new THREE.Vector3();
                 planetObj.planet.getWorldPosition(planetWorldPos);
-                
-                // Mover la cámara hacia el planeta
+               
                 const distance = planetObj.data.radius * 3;
                 camera.position.set(
                     planetWorldPos.x + distance,
@@ -690,9 +661,6 @@
             }
         });
 
-        // ============================================
-        // ANIMACIÓN PRINCIPAL
-        // ============================================
         
         const animate = () => {
             requestAnimationFrame(animate);
@@ -700,16 +668,16 @@
             const delta = clock.getDelta();
 
             if (!isPaused) {
-                // Rotar el Sol sobre su eje
+               
                 sun.rotation.y += 0.001 * simulationSpeed;
                 sunGlow.rotation.y += 0.0005 * simulationSpeed;
 
-                // Animar cada planeta
+               
                 planets.forEach(({ orbitContainer, planet, data }) => {
-                    // Rotación sobre su propio eje
+                   
                     planet.rotation.y += data.rotationSpeed * simulationSpeed;
 
-                    // Traslación orbital (girar el contenedor)
+                   
                     orbitContainer.rotation.y += (data.orbitSpeed * delta) * simulationSpeed;
                 });
             }
@@ -718,17 +686,14 @@
             renderer.render(scene, camera);
         };
 
-        // ============================================
-        // RESPONSIVIDAD
-        // ============================================
-        
+     
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Iniciar animación
+       
         animate();
 
         console.log('🪐 Sistema Solar cargado correctamente');
