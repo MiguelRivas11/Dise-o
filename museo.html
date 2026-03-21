@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>05. Gran Museo Virtual | MARG.dev</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            text-decoration: none;
+            z-index: 10;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+            pointer-events: none;
+            z-index: 100;
+            text-align: center;
+        }
+
+        #loading span {
+            display: block;
+            font-size: 14px;
+            margin-top: 10px;
+            color: #4a90e2;
+        }
+    </style>
+</head>
+
+<body>
+    <a href="index.html" class="back-btn">← Volver al Portafolio</a>
+    
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+            "orbit": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js",
+            "gltf": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js",
+            "fontloader": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/FontLoader.js",
+            "textgeometry": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/geometries/TextGeometry.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'orbit';
+        import { GLTFLoader } from 'gltf';
+        import { FontLoader } from 'fontloader';
+        import { TextGeometry } from 'textgeometry';
+
+        // 1. ESCENA, CÁMARA Y RENDERER
+        const escena = new THREE.Scene();
+        escena.background = new THREE.Color(0x050508);
+        escena.fog = new THREE.Fog(0x050508, 10, 40); // Neblina más lejana para cuarto grande
+
+        const camara = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camara.position.set(0, 5, 15); // Cámara más alta y lejana para ver todo
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        document.body.appendChild(renderer.domElement);
+
+        // 2. CONSTRUIR LA SALA GIGANTE
+        const materialPared = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
+        const materialPiso = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.1 });
+
+        // Piso más grande (60x60)
+        const piso = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), materialPiso);
+        piso.rotation.x = -Math.PI / 2;
+        piso.receiveShadow = true;
+        escena.add(piso);
+
+        // Pared del fondo más ancha
+        const paredFondo = new THREE.Mesh(new THREE.PlaneGeometry(60, 15), materialPared);
+        paredFondo.position.set(0, 7.5, -15);
+        paredFondo.receiveShadow = true;
+        escena.add(paredFondo);
+
+        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.5);
+        escena.add(luzAmbiente);
+
+        function crearPedestal(x, z) {
+            const geo = new THREE.BoxGeometry(1.2, 1, 1.2);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.9, metalness: 0.5 });
+            const pedestal = new THREE.Mesh(geo, mat);
+            pedestal.position.set(x, 0.5, z);
+            pedestal.castShadow = true;
+            pedestal.receiveShadow = true;
+            escena.add(pedestal);
+        }
+
+        function crearLuzFoco(x, y, z, objetivo) {
+            const spotLight = new THREE.SpotLight(0xfffaed, 120); // Un poco menos intenso para que no sature
+            spotLight.position.set(x, y, z);
+            spotLight.angle = Math.PI / 4;
+            spotLight.penumbra = 0.5;
+            spotLight.castShadow = true;
+            spotLight.target = objetivo;
+            escena.add(spotLight);
+        }
+
+        // 3. LA MAGIA: CONFIGURACIÓN DE LAS 10 OBRAS
+        // Aquí puedes cambiar las URLs, títulos e historias fácilmente en el futuro
+        // 3. LA MAGIA: CONFIGURACIÓN DE LAS 10 OBRAS
+        const datosObras = [
+            // Fila Trasera (z: -10)
+            { url: './models/AntiqueCamera.glb', x: -12, z: -10, escala: 0.3, yOffset: 1.0, titulo: "Cámara Pionera", desc: "El inicio de la fotografía\n1890." },
+            { url: './models/DamagedHelmet.glb', x: -6, z: -10, escala: 0.8, yOffset: 1.5, titulo: "Casco Dañado", desc: "Superviviente de la\nguerra espacial." },
+            { url: './models/FlightHelmet.glb', x: 0, z: -10, escala: 2.5, yOffset: 1.0, titulo: "Casco Aviador", desc: "Reliquia de la Primera\nGuerra Mundial." },
+            { url: './models/BoomBox.glb', x: 6, z: -10, escala: 50.0, yOffset: 1.0, titulo: "BoomBox Vintage", desc: "Alta fidelidad de\nlos años 80s." },
+            { url: './models/Duck.glb', x: 12, z: -10, escala: 1.0, yOffset: 1.0, titulo: "Pato de Goma", desc: "El psicólogo personal\nde todo programador." },
+
+            // Fila Delantera (z: -4)
+            { url: './models/WaterBottle.glb', x: -12, z: -4, escala: 5.0, yOffset: 1.0, titulo: "Botella PBR", desc: "Estudio perfecto de\nrefracción de luz." },
+            { url: './models/Corset.glb', x: -6, z: -4, escala: 20.0, yOffset: 1.0, titulo: "Corsé Histórico", desc: "La moda incómoda\ndel siglo XIX." },
+            { url: './models/Fox.glb', x: 0, z: -4, escala: 0.02, yOffset: 1.0, titulo: "Zorro Digital", desc: "Naturaleza plasmada en\npolígonos de baja densidad." },
+
+            //  ESTAS SON LAS DOS NUEVAS OBRAS 
+            { url: './models/Lantern.glb', x: 6, z: -4, escala: 0.08, yOffset: 1.0, titulo: "Farol de Hierro", desc: "Iluminaba las calles\nantes de la electricidad." },
+            { url: './models/Avocado.glb', x: 12, z: -4, escala: 15.0, yOffset: 1.0, titulo: "Aguacate Perfecto", desc: "Obra maestra del\nfotorrealismo digital." }
+        ];
+        // 4. GESTIÓN DE CARGA DINÁMICA
+        const obras = [];
+        const loader = new GLTFLoader();
+        const fontLoader = new FontLoader();
+        let loadedFont = null;
+        let currentTextMesh = null;
+
+        let archivosCargados = 0;
+        const totalArchivos = datosObras.length + 1; 
+
+        const textoProgreso = document.getElementById('carga-progreso');
+
+        function verificarCarga(nombreArchivo) {
+            archivosCargados++;
+            console.log(` Cargado: ${nombreArchivo} (${archivosCargados}/${totalArchivos})`);
+            textoProgreso.innerText = `Cargando: ${archivosCargados} / ${totalArchivos} archivos`;
+
+            if (archivosCargados >= totalArchivos && loadedFont) {
+                console.log(" Galería completa.");
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        // 5. CARGAR FUENTE
+        fontLoader.load(
+            'https://unpkg.com/three@0.158.0/examples/fonts/helvetiker_regular.typeface.json',
+            (font) => {
+                loadedFont = font;
+                verificarCarga("Fuente de Texto");
+            }
+        );
+
+        // 6. CREACIÓN DE TEXTO 3D
+        function crearTexto3D(obra) {
+            if (currentTextMesh) {
+                currentTextMesh.geometry.dispose();
+                currentTextMesh.material.dispose();
+                escena.remove(currentTextMesh);
+            }
+
+            if (!loadedFont) return;
+
+            const textGeometry = new TextGeometry(
+                `${obra.titulo}\n\n${obra.desc}`,
+                {
+                    font: loadedFont, size: 0.25, height: 0.05,
+                    curveSegments: 12, bevelEnabled: true,
+                    bevelThickness: 0.01, bevelSize: 0.01, bevelSegments: 3
+                }
+            );
+
+            textGeometry.computeBoundingBox();
+            textGeometry.center();
+
+            const textMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff, metalness: 0.1, roughness: 0.3,
+                emissive: 0xffffff, emissiveIntensity: 0.6
+            });
+
+            currentTextMesh = new THREE.Mesh(textGeometry, textMaterial);
+            currentTextMesh.position.set(obra.modeloRef.position.x, 3.0, obra.modeloRef.position.z + 1.5);
+            currentTextMesh.rotation.y = 0;
+            escena.add(currentTextMesh);
+        }
+
+        // 7. CARGAR LAS 10 OBRAS CON UN BUCLE (¡Programación Avanzada!)
+        datosObras.forEach((dato, index) => {
+            crearPedestal(dato.x, dato.z);
+
+            loader.load(dato.url, (gltf) => {
+                const modelo = gltf.scene;
+                modelo.position.set(dato.x, dato.yOffset, dato.z);
+                modelo.scale.set(dato.escala, dato.escala, dato.escala);
+
+                let meshes = [];
+                modelo.traverse((child) => { if (child.isMesh) { child.castShadow = true; meshes.push(child); } });
+
+                escena.add(modelo);
+                // Ponemos el foco de luz justo arriba y un poco adelante del modelo
+                crearLuzFoco(dato.x, 6, dato.z + 2, modelo);
+
+                obras.push({
+                    modeloRef: modelo,
+                    meshes: meshes,
+                    titulo: dato.titulo,
+                    desc: dato.desc,
+                    escalaOriginal: { x: dato.escala, y: dato.escala, z: dato.escala }
+                });
+
+                verificarCarga(`Obra ${index + 1}: ${dato.titulo}`);
+            }, undefined, (error) => {
+                console.error(` ERROR cargando ${dato.titulo}:`, error);
+            });
+        });
+
+        // 8. CONTROLES Y RAYCASTING
+        const controles = new OrbitControls(camara, renderer.domElement);
+        controles.enableDamping = true;
+        controles.dampingFactor = 0.05;
+        controles.maxDistance = 25; // Permitimos alejarnos más para ver las 10 obras
+        controles.maxPolarAngle = Math.PI / 2 - 0.05;
+
+        const raycaster = new THREE.Raycaster();
+        const punteroMouse = new THREE.Vector2();
+
+        window.addEventListener('mousemove', (evento) => {
+            punteroMouse.x = (evento.clientX / window.innerWidth) * 2 - 1;
+            punteroMouse.y = -(evento.clientY / window.innerHeight) * 2 + 1;
+        });
+
+        const reloj = new THREE.Clock();
+        let currentHoveredObra = null;
+
+        function animar() {
+            requestAnimationFrame(animar);
+            controles.update();
+            const tiempo = reloj.getElapsedTime();
+
+            raycaster.setFromCamera(punteroMouse, camara);
+
+            let meshesCargados = [];
+            obras.forEach(o => meshesCargados = meshesCargados.concat(o.meshes));
+
+            const intersecciones = raycaster.intersectObjects(meshesCargados);
+
+            let obraHovered = null;
+            if (intersecciones.length > 0) {
+                const meshTocado = intersecciones[0].object;
+                obraHovered = obras.find(o => o.meshes.includes(meshTocado));
+            }
+
+            if (obraHovered !== currentHoveredObra) {
+                currentHoveredObra = obraHovered;
+                if (currentHoveredObra) {
+                    crearTexto3D(currentHoveredObra);
+                } else {
+                    if (currentTextMesh) {
+                        currentTextMesh.geometry.dispose();
+                        currentTextMesh.material.dispose();
+                        escena.remove(currentTextMesh);
+                        currentTextMesh = null;
+                    }
+                }
+            }
+
+            // ANIMACIÓN INDIVIDUAL DE CADA OBRA
+            obras.forEach(obra => {
+                const esObraHovered = (obra === obraHovered);
+                
+                if (esObraHovered) {
+                    // 1. RESALTARSE: Crece a un 120% de su tamaño original rápidamente
+                    const escalaHover = obra.escalaOriginal.x * 1.2;
+                    obra.modeloRef.scale.set(
+                        THREE.MathUtils.lerp(obra.modeloRef.scale.x, escalaHover, 0.1),
+                        THREE.MathUtils.lerp(obra.modeloRef.scale.y, escalaHover, 0.1),
+                        THREE.MathUtils.lerp(obra.modeloRef.scale.z, escalaHover, 0.1)
+                    );
+                    
+                    // 2. MOVERSE: Gira rápidamente (Efecto de giro de 360 grados)
+                    // Si quieres que gire más rápido, sube este número (ej. 0.1)
+                    obra.modeloRef.rotation.y += 0.06; 
+                    
+                } else {
+                    // ESTADO NORMAL (Cuando quitas el mouse)
+                    // Vuelve a su tamaño original suavemente
+                    obra.modeloRef.scale.set(
+                        THREE.MathUtils.lerp(obra.modeloRef.scale.x, obra.escalaOriginal.x, 0.1),
+                        THREE.MathUtils.lerp(obra.modeloRef.scale.y, obra.escalaOriginal.y, 0.1),
+                        THREE.MathUtils.lerp(obra.modeloRef.scale.z, obra.escalaOriginal.z, 0.1)
+                    );
+                    
+                    // Gira muy lento (modo exhibición de museo)
+                    obra.modeloRef.rotation.y += 0.003;
+                }
+            });
+
+            renderer.render(escena, camara);
+        }
+
+        animar();
+
+        window.addEventListener('resize', () => {
+            camara.aspect = window.innerWidth / window.innerHeight;
+            camara.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>
