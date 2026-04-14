@@ -149,8 +149,8 @@
         import { TextGeometry } from 'textgeometry';
 
         const escena = new THREE.Scene();
-        escena.background = new THREE.Color(0x050508);
-        escena.fog = new THREE.Fog(0x050508, 14, 90);
+        escena.background = new THREE.Color(0xf3eee4);
+        escena.fog = new THREE.Fog(0xf0eadf, 24, 120);
 
         const camara = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 120);
         camara.position.set(0, 1.7, 12);
@@ -179,9 +179,9 @@
             activarPasos(false);
         });
 
-        const materialPared = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.95 });
-        const materialPiso = new THREE.MeshStandardMaterial({ color: 0x0b0b0d, roughness: 0.7, metalness: 0.05 });
-        const materialAlfombra = new THREE.MeshStandardMaterial({ color: 0x8b0b16, roughness: 0.85, metalness: 0.02 });
+        const materialPared = new THREE.MeshStandardMaterial({ color: 0xe8ddca, roughness: 0.9, metalness: 0.03 });
+        const materialPiso = new THREE.MeshStandardMaterial({ color: 0xd5c7b0, roughness: 0.78, metalness: 0.04 });
+        const materialAlfombra = new THREE.MeshStandardMaterial({ color: 0xa11324, roughness: 0.85, metalness: 0.02 });
 
         const piso = new THREE.Mesh(new THREE.PlaneGeometry(26, 82), materialPiso);
         piso.rotation.x = -Math.PI / 2;
@@ -214,10 +214,21 @@
         paredEntrada.rotation.y = Math.PI;
         escena.add(paredEntrada);
 
-        const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.5);
+        const techo = new THREE.Mesh(
+            new THREE.PlaneGeometry(26, 82),
+            new THREE.MeshStandardMaterial({ color: 0xf3ecde, roughness: 0.92, side: THREE.DoubleSide })
+        );
+        techo.rotation.x = Math.PI / 2;
+        techo.position.set(0, 7.8, -20);
+        escena.add(techo);
+
+        const luzAmbiente = new THREE.AmbientLight(0xfff7ed, 0.75);
         escena.add(luzAmbiente);
 
-        const luzPrincipal = new THREE.DirectionalLight(0xfff4df, 0.6);
+        const luzHemisferica = new THREE.HemisphereLight(0xfff8ef, 0xd7c3a6, 0.55);
+        escena.add(luzHemisferica);
+
+        const luzPrincipal = new THREE.DirectionalLight(0xfff2df, 0.95);
         luzPrincipal.position.set(0, 14, 10);
         luzPrincipal.castShadow = true;
         luzPrincipal.shadow.mapSize.width = 2048;
@@ -226,31 +237,79 @@
 
         for (let i = 0; i < 7; i++) {
             const z = 10 - i * 10;
-            const techoSpot = new THREE.SpotLight(0xfff5e5, 20, 25, Math.PI / 8, 0.4);
+            const techoSpot = new THREE.SpotLight(0xfff3dc, 11, 34, Math.PI / 7, 0.55);
             techoSpot.position.set(0, 6.5, z);
             techoSpot.target.position.set(0, 0, z);
             escena.add(techoSpot.target);
             escena.add(techoSpot);
         }
 
+        function crearColumnaRomana(x, z) {
+            const materialColumna = new THREE.MeshStandardMaterial({ color: 0xf4ead7, roughness: 0.86, metalness: 0.03 });
+
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.58, 0.28, 24), materialColumna);
+            base.position.set(x, 0.14, z);
+            base.receiveShadow = true;
+            escena.add(base);
+
+            const fuste = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.36, 5.7, 24), materialColumna);
+            fuste.position.set(x, 3.05, z);
+            fuste.castShadow = true;
+            fuste.receiveShadow = true;
+            escena.add(fuste);
+
+            const capitel = new THREE.Mesh(new THREE.CylinderGeometry(0.56, 0.42, 0.35, 24), materialColumna);
+            capitel.position.set(x, 6.05, z);
+            capitel.castShadow = true;
+            capitel.receiveShadow = true;
+            escena.add(capitel);
+        }
+
+        for (let z = 12; z >= -52; z -= 8) {
+            crearColumnaRomana(-10.9, z);
+            crearColumnaRomana(10.9, z);
+        }
+
         function crearPedestal(x, z) {
             const geo = new THREE.BoxGeometry(1.2, 1, 1.2);
-            const mat = new THREE.MeshStandardMaterial({ color: 0x161616, roughness: 0.9, metalness: 0.5 });
+            const mat = new THREE.MeshStandardMaterial({ color: 0xefe6d6, roughness: 0.83, metalness: 0.05 });
             const pedestal = new THREE.Mesh(geo, mat);
             pedestal.position.set(x, 0.5, z);
             pedestal.castShadow = true;
             pedestal.receiveShadow = true;
             escena.add(pedestal);
-        }
 
-        function crearLuzFoco(x, y, z, objetivo) {
-            const spotLight = new THREE.SpotLight(0xfffaed, 120); // Un poco menos intenso para que no sature
-            spotLight.position.set(x, y, z);
-            spotLight.angle = Math.PI / 4;
-            spotLight.penumbra = 0.5;
-            spotLight.castShadow = true;
-            spotLight.target = objetivo;
-            escena.add(spotLight);
+            const anilloLed = new THREE.Mesh(
+                new THREE.TorusGeometry(0.68, 0.03, 10, 36),
+                new THREE.MeshStandardMaterial({
+                    color: 0x4eb6ff,
+                    emissive: 0x2a9dff,
+                    emissiveIntensity: 1.35,
+                    roughness: 0.25,
+                    metalness: 0.15
+                })
+            );
+            anilloLed.rotation.x = Math.PI / 2;
+            anilloLed.position.set(x, 1.02, z);
+            escena.add(anilloLed);
+
+            const offsetX = x < 0 ? 0.61 : -0.61;
+            const tiraLed = new THREE.Mesh(
+                new THREE.BoxGeometry(0.04, 0.08, 0.52),
+                new THREE.MeshStandardMaterial({
+                    color: 0x9fd7ff,
+                    emissive: 0x3fa7ff,
+                    emissiveIntensity: 1.25,
+                    roughness: 0.2,
+                    metalness: 0.1
+                })
+            );
+            tiraLed.position.set(x + offsetX, 0.62, z);
+            escena.add(tiraLed);
+
+            const luzLed = new THREE.PointLight(0x3fa7ff, 1.2, 4.5, 2);
+            luzLed.position.set(x + (x < 0 ? 0.35 : -0.35), 1.1, z);
+            escena.add(luzLed);
         }
 
         const datosObras = [
@@ -368,8 +427,6 @@
                 modelo.position.y += ajusteY;
 
                 escena.add(modelo);
-                const luzFrontalX = dato.x < 0 ? dato.x + 1.5 : dato.x - 1.5;
-                crearLuzFoco(luzFrontalX, 5.2, dato.z + 1.3, modelo);
 
                 obras.push({
                     modeloRef: modelo,
