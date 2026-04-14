@@ -214,13 +214,132 @@
         paredEntrada.rotation.y = Math.PI;
         escena.add(paredEntrada);
 
+        function crearTexturaTecho() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#f4ead8';
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            ctx.strokeStyle = '#c8b28a';
+            ctx.lineWidth = 14;
+
+            for (let i = 0; i <= 8; i++) {
+                const x = 64 + i * 112;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, 1024);
+                ctx.stroke();
+            }
+
+            for (let j = 0; j <= 16; j++) {
+                const y = 48 + j * 58;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(1024, y);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#d8c3a0';
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 12; j++) {
+                    const cx = 128 + i * 112;
+                    const cy = 72 + j * 80;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 16, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#b58f5a';
+                    ctx.lineWidth = 4;
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#efe1c7';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#d8c3a0';
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(1, 1);
+            return texture;
+        }
+
         const techo = new THREE.Mesh(
             new THREE.PlaneGeometry(26, 82),
-            new THREE.MeshStandardMaterial({ color: 0xf3ecde, roughness: 0.92, side: THREE.DoubleSide })
+            new THREE.MeshStandardMaterial({
+                map: crearTexturaTecho(),
+                color: 0xffffff,
+                roughness: 0.95,
+                side: THREE.DoubleSide
+            })
         );
         techo.rotation.x = Math.PI / 2;
         techo.position.set(0, 7.8, -20);
         escena.add(techo);
+
+        function crearCandelabro(x, z) {
+            const grupo = new THREE.Group();
+
+            const cadenaMaterial = new THREE.MeshStandardMaterial({ color: 0x7d6848, roughness: 0.45, metalness: 0.7 });
+            const arosMaterial = new THREE.MeshStandardMaterial({
+                color: 0xd2b47a,
+                emissive: 0xffc96e,
+                emissiveIntensity: 0.3,
+                roughness: 0.3,
+                metalness: 0.65
+            });
+
+            const cadena = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.6, 10), cadenaMaterial);
+            cadena.position.y = -0.8;
+            grupo.add(cadena);
+
+            const cuerpo = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.08, 10, 24), arosMaterial);
+            cuerpo.rotation.x = Math.PI / 2;
+            cuerpo.position.y = -1.7;
+            grupo.add(cuerpo);
+
+            const brazoOffsets = [
+                [0.72, 0, 0], [-0.72, 0, 0], [0, 0, 0.72], [0, 0, -0.72],
+                [0.5, 0, 0.5], [-0.5, 0, 0.5], [0.5, 0, -0.5], [-0.5, 0, -0.5]
+            ];
+
+            brazoOffsets.forEach(([bx, by, bz]) => {
+                const brazo = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.8, 8), cadenaMaterial);
+                brazo.position.set(bx, -1.65 + by, bz);
+                brazo.rotation.z = Math.atan2(bz, bx);
+                grupo.add(brazo);
+
+                const bombilla = new THREE.Mesh(
+                    new THREE.SphereGeometry(0.08, 10, 10),
+                    new THREE.MeshStandardMaterial({
+                        color: 0xfff3d0,
+                        emissive: 0xffe2a8,
+                        emissiveIntensity: 1.1,
+                        roughness: 0.15
+                    })
+                );
+                bombilla.position.set(bx, -1.65, bz);
+                grupo.add(bombilla);
+
+                const luz = new THREE.PointLight(0xffe0a3, 0.35, 5, 2);
+                luz.position.set(bx, -1.6, bz);
+                grupo.add(luz);
+            });
+
+            grupo.position.set(x, 7.25, z);
+            escena.add(grupo);
+        }
+
+        for (let i = 0; i < 6; i++) {
+            const z = 8 - i * 12;
+            crearCandelabro(0, z);
+        }
 
         const luzAmbiente = new THREE.AmbientLight(0xfff7ed, 0.75);
         escena.add(luzAmbiente);
