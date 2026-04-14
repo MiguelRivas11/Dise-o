@@ -57,17 +57,83 @@
             margin-top: 10px;
             color: #4a90e2;
         }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 20;
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: #f3f4f6;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        #obra-info {
+            position: absolute;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%);
+            z-index: 20;
+            min-width: 280px;
+            max-width: 560px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            color: #ffffff;
+            background: rgba(0, 0, 0, 0.72);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            text-align: center;
+            display: none;
+        }
+
+        #obra-info h3 {
+            margin: 0 0 6px;
+            font-size: 18px;
+            color: #ffe4a3;
+        }
+
+        #obra-info p {
+            margin: 0;
+            font-size: 14px;
+            color: #d1d5db;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 15;
+            width: 10px;
+            height: 10px;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 50%;
+            pointer-events: none;
+        }
     </style>
 </head>
 
 <body>
     <a href="index.html" class="back-btn">← Volver al Portafolio</a>
+    <div id="loading">
+        Cargando galeria 3D...
+        <span id="carga-progreso">Cargando: 0 / 11 archivos</span>
+    </div>
+    <div id="hud">Click en la escena para capturar mouse<br>W A S D para caminar</div>
+    <div id="crosshair"></div>
+    <div id="obra-info">
+        <h3 id="obra-titulo"></h3>
+        <p id="obra-desc"></p>
+    </div>
     
     <script type="importmap">
     {
         "imports": {
             "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
-            "orbit": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/OrbitControls.js",
+            "pointerlock": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/controls/PointerLockControls.js",
             "gltf": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/GLTFLoader.js",
             "fontloader": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/loaders/FontLoader.js",
             "textgeometry": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/geometries/TextGeometry.js"
@@ -77,18 +143,17 @@
 
     <script type="module">
         import * as THREE from 'three';
-        import { OrbitControls } from 'orbit';
+        import { PointerLockControls } from 'pointerlock';
         import { GLTFLoader } from 'gltf';
         import { FontLoader } from 'fontloader';
         import { TextGeometry } from 'textgeometry';
 
-        // 1. ESCENA, CÁMARA Y RENDERER
         const escena = new THREE.Scene();
         escena.background = new THREE.Color(0x050508);
-        escena.fog = new THREE.Fog(0x050508, 10, 40); // Neblina más lejana para cuarto grande
+        escena.fog = new THREE.Fog(0x050508, 14, 90);
 
-        const camara = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-        camara.position.set(0, 5, 15); // Cámara más alta y lejana para ver todo
+        const camara = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 120);
+        camara.position.set(0, 1.7, 12);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -97,24 +162,76 @@
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         document.body.appendChild(renderer.domElement);
 
-        // 2. CONSTRUIR LA SALA GIGANTE
-        const materialPared = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
-        const materialPiso = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.1 });
+        const controlesFPS = new PointerLockControls(camara, document.body);
+        escena.add(controlesFPS.getObject());
 
-        // Piso más grande (60x60)
-        const piso = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), materialPiso);
+        renderer.domElement.addEventListener('click', () => {
+            controlesFPS.lock();
+        });
+
+        const hud = document.getElementById('hud');
+        controlesFPS.addEventListener('lock', () => {
+            if (hud) hud.textContent = 'Recorrido activo - ESC para liberar mouse';
+            iniciarAudio();
+        });
+        controlesFPS.addEventListener('unlock', () => {
+            if (hud) hud.innerHTML = 'Click en la escena para capturar mouse<br>W A S D para caminar';
+            activarPasos(false);
+        });
+
+        const materialPared = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.95 });
+        const materialPiso = new THREE.MeshStandardMaterial({ color: 0x0b0b0d, roughness: 0.7, metalness: 0.05 });
+        const materialAlfombra = new THREE.MeshStandardMaterial({ color: 0x8b0b16, roughness: 0.85, metalness: 0.02 });
+
+        const piso = new THREE.Mesh(new THREE.PlaneGeometry(26, 82), materialPiso);
         piso.rotation.x = -Math.PI / 2;
         piso.receiveShadow = true;
         escena.add(piso);
 
-        // Pared del fondo más ancha
-        const paredFondo = new THREE.Mesh(new THREE.PlaneGeometry(60, 15), materialPared);
-        paredFondo.position.set(0, 7.5, -15);
-        paredFondo.receiveShadow = true;
+        const alfombra = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 72), materialAlfombra);
+        alfombra.rotation.x = -Math.PI / 2;
+        alfombra.position.y = 0.01;
+        alfombra.position.z = -20;
+        alfombra.receiveShadow = true;
+        escena.add(alfombra);
+
+        const paredIzquierda = new THREE.Mesh(new THREE.PlaneGeometry(82, 8), materialPared);
+        paredIzquierda.position.set(-12.8, 4, -20);
+        paredIzquierda.rotation.y = Math.PI / 2;
+        escena.add(paredIzquierda);
+
+        const paredDerecha = new THREE.Mesh(new THREE.PlaneGeometry(82, 8), materialPared);
+        paredDerecha.position.set(12.8, 4, -20);
+        paredDerecha.rotation.y = -Math.PI / 2;
+        escena.add(paredDerecha);
+
+        const paredFondo = new THREE.Mesh(new THREE.PlaneGeometry(26, 8), materialPared);
+        paredFondo.position.set(0, 4, -61);
         escena.add(paredFondo);
+
+        const paredEntrada = new THREE.Mesh(new THREE.PlaneGeometry(26, 8), materialPared);
+        paredEntrada.position.set(0, 4, 21);
+        paredEntrada.rotation.y = Math.PI;
+        escena.add(paredEntrada);
 
         const luzAmbiente = new THREE.AmbientLight(0xffffff, 0.5);
         escena.add(luzAmbiente);
+
+        const luzPrincipal = new THREE.DirectionalLight(0xfff4df, 0.6);
+        luzPrincipal.position.set(0, 14, 10);
+        luzPrincipal.castShadow = true;
+        luzPrincipal.shadow.mapSize.width = 2048;
+        luzPrincipal.shadow.mapSize.height = 2048;
+        escena.add(luzPrincipal);
+
+        for (let i = 0; i < 7; i++) {
+            const z = 10 - i * 10;
+            const techoSpot = new THREE.SpotLight(0xfff5e5, 20, 25, Math.PI / 8, 0.4);
+            techoSpot.position.set(0, 6.5, z);
+            techoSpot.target.position.set(0, 0, z);
+            escena.add(techoSpot.target);
+            escena.add(techoSpot);
+        }
 
         function crearPedestal(x, z) {
             const geo = new THREE.BoxGeometry(1.2, 1, 1.2);
@@ -136,27 +253,19 @@
             escena.add(spotLight);
         }
 
-        // 3. LA MAGIA: CONFIGURACIÓN DE LAS 10 OBRAS
-        // Aquí puedes cambiar las URLs, títulos e historias fácilmente en el futuro
-        // 3. LA MAGIA: CONFIGURACIÓN DE LAS 10 OBRAS
         const datosObras = [
-            // Fila Trasera (z: -10)
-            { url: './models/AntiqueCamera.glb', x: -12, z: -10, escala: 0.3, yOffset: 1.0, titulo: "Cámara Pionera", desc: "El inicio de la fotografía\n1890." },
-            { url: './models/DamagedHelmet.glb', x: -6, z: -10, escala: 0.8, yOffset: 1.5, titulo: "Casco Dañado", desc: "Superviviente de la\nguerra espacial." },
-            { url: './models/FlightHelmet.glb', x: 0, z: -10, escala: 2.5, yOffset: 1.0, titulo: "Casco Aviador", desc: "Reliquia de la Primera\nGuerra Mundial." },
-            { url: './models/BoomBox.glb', x: 6, z: -10, escala: 50.0, yOffset: 1.0, titulo: "BoomBox Vintage", desc: "Alta fidelidad de\nlos años 80s." },
-            { url: './models/Duck.glb', x: 12, z: -10, escala: 1.0, yOffset: 1.0, titulo: "Pato de Goma", desc: "El psicólogo personal\nde todo programador." },
-
-            // Fila Delantera (z: -4)
-            { url: './models/WaterBottle.glb', x: -12, z: -4, escala: 5.0, yOffset: 1.0, titulo: "Botella PBR", desc: "Estudio perfecto de\nrefracción de luz." },
-            { url: './models/Corset.glb', x: -6, z: -4, escala: 20.0, yOffset: 1.0, titulo: "Corsé Histórico", desc: "La moda incómoda\ndel siglo XIX." },
-            { url: './models/Fox.glb', x: 0, z: -4, escala: 0.02, yOffset: 1.0, titulo: "Zorro Digital", desc: "Naturaleza plasmada en\npolígonos de baja densidad." },
-
-            //  ESTAS SON LAS DOS NUEVAS OBRAS 
-            { url: './models/Lantern.glb', x: 6, z: -4, escala: 0.08, yOffset: 1.0, titulo: "Farol de Hierro", desc: "Iluminaba las calles\nantes de la electricidad." },
-            { url: './models/Avocado.glb', x: 12, z: -4, escala: 15.0, yOffset: 1.0, titulo: "Aguacate Perfecto", desc: "Obra maestra del\nfotorrealismo digital." }
+            { url: './models/AntiqueCamera.glb', x: -5.2, z: 6, escala: 0.3, yOffset: 1.0, titulo: 'Camara Pionera', desc: 'Inicio de la fotografia moderna.' },
+            { url: './models/DamagedHelmet.glb', x: 5.2, z: 6, escala: 0.8, yOffset: 1.5, titulo: 'Casco Danado', desc: 'Pieza de ciencia ficcion y desgaste.' },
+            { url: './models/FlightHelmet.glb', x: -5.2, z: -2, escala: 2.5, yOffset: 1.0, titulo: 'Casco Aviador', desc: 'Ingenieria y historia en una reliquia.' },
+            { url: './models/BoomBox.glb', x: 5.2, z: -2, escala: 50.0, yOffset: 1.0, titulo: 'BoomBox Vintage', desc: 'Icono cultural de los ochenta.' },
+            { url: './models/Duck.glb', x: -5.2, z: -10, escala: 1.0, yOffset: 1.0, titulo: 'Pato de Goma', desc: 'Objeto simple convertido en arte pop.' },
+            { url: './models/WaterBottle.glb', x: 5.2, z: -10, escala: 5.0, yOffset: 1.0, titulo: 'Botella PBR', desc: 'Reflexion y refraccion realista.' },
+            { url: './models/Corset.glb', x: -5.2, z: -18, escala: 20.0, yOffset: 1.0, titulo: 'Corse Historico', desc: 'Moda y estructura de otra epoca.' },
+            { url: './models/Fox.glb', x: 5.2, z: -18, escala: 0.02, yOffset: 1.0, titulo: 'Zorro Digital', desc: 'Figura estilizada en baja densidad.' },
+            { url: './models/Lantern.glb', x: -5.2, z: -26, escala: 0.08, yOffset: 1.0, titulo: 'Farol de Hierro', desc: 'Luz urbana antes de la electricidad.' },
+            { url: './models/Avocado.glb', x: 5.2, z: -26, escala: 15.0, yOffset: 1.0, titulo: 'Aguacate Perfecto', desc: 'Practica de material fotorrealista.' }
         ];
-        // 4. GESTIÓN DE CARGA DINÁMICA
+
         const obras = [];
         const loader = new GLTFLoader();
         const fontLoader = new FontLoader();
@@ -167,19 +276,42 @@
         const totalArchivos = datosObras.length + 1; 
 
         const textoProgreso = document.getElementById('carga-progreso');
+        const obraInfo = document.getElementById('obra-info');
+        const obraTitulo = document.getElementById('obra-titulo');
+        const obraDesc = document.getElementById('obra-desc');
+        const alturaPedestal = 1.0;
+        const separacionModeloPedestal = 0.03;
+
+        const obstaculos = datosObras.map((obra) => ({ x: obra.x, z: obra.z, radio: 1.5 }));
+        const jugadorRadio = 0.45;
+        const limites = {
+            minX: -12.1 + jugadorRadio,
+            maxX: 12.1 - jugadorRadio,
+            minZ: -60 + jugadorRadio,
+            maxZ: 20 - jugadorRadio
+        };
+
+        let audioContext = null;
+        let ambienteGain = null;
+        let pasosGain = null;
+        let pasosTimer = 0;
 
         function verificarCarga(nombreArchivo) {
             archivosCargados++;
             console.log(` Cargado: ${nombreArchivo} (${archivosCargados}/${totalArchivos})`);
-            textoProgreso.innerText = `Cargando: ${archivosCargados} / ${totalArchivos} archivos`;
+            if (textoProgreso) {
+                textoProgreso.innerText = `Cargando: ${archivosCargados} / ${totalArchivos} archivos`;
+            }
 
             if (archivosCargados >= totalArchivos && loadedFont) {
                 console.log(" Galería completa.");
-                document.getElementById('loading').style.display = 'none';
+                const loadingEl = document.getElementById('loading');
+                if (loadingEl) {
+                    loadingEl.style.display = 'none';
+                }
             }
         }
 
-        // 5. CARGAR FUENTE
         fontLoader.load(
             'https://unpkg.com/three@0.158.0/examples/fonts/helvetiker_regular.typeface.json',
             (font) => {
@@ -188,7 +320,6 @@
             }
         );
 
-        // 6. CREACIÓN DE TEXTO 3D
         function crearTexto3D(obra) {
             if (currentTextMesh) {
                 currentTextMesh.geometry.dispose();
@@ -216,118 +347,266 @@
             });
 
             currentTextMesh = new THREE.Mesh(textGeometry, textMaterial);
-            currentTextMesh.position.set(obra.modeloRef.position.x, 3.0, obra.modeloRef.position.z + 1.5);
-            currentTextMesh.rotation.y = 0;
+            currentTextMesh.position.set(0, 3.1, obra.modeloRef.position.z);
             escena.add(currentTextMesh);
         }
 
-        // 7. CARGAR LAS 10 OBRAS CON UN BUCLE (¡Programación Avanzada!)
         datosObras.forEach((dato, index) => {
             crearPedestal(dato.x, dato.z);
 
             loader.load(dato.url, (gltf) => {
                 const modelo = gltf.scene;
-                modelo.position.set(dato.x, dato.yOffset, dato.z);
+                modelo.position.set(dato.x, 0, dato.z);
                 modelo.scale.set(dato.escala, dato.escala, dato.escala);
 
                 let meshes = [];
                 modelo.traverse((child) => { if (child.isMesh) { child.castShadow = true; meshes.push(child); } });
 
+                const bbox = new THREE.Box3().setFromObject(modelo);
+                const minY = bbox.min.y;
+                const ajusteY = (alturaPedestal + separacionModeloPedestal) - minY;
+                modelo.position.y += ajusteY;
+
                 escena.add(modelo);
-                // Ponemos el foco de luz justo arriba y un poco adelante del modelo
-                crearLuzFoco(dato.x, 6, dato.z + 2, modelo);
+                const luzFrontalX = dato.x < 0 ? dato.x + 1.5 : dato.x - 1.5;
+                crearLuzFoco(luzFrontalX, 5.2, dato.z + 1.3, modelo);
 
                 obras.push({
                     modeloRef: modelo,
                     meshes: meshes,
                     titulo: dato.titulo,
                     desc: dato.desc,
-                    escalaOriginal: { x: dato.escala, y: dato.escala, z: dato.escala }
+                    escalaOriginal: { x: dato.escala, y: dato.escala, z: dato.escala },
+                    rotacionOriginalY: modelo.rotation.y,
+                    centro: new THREE.Vector3(dato.x, alturaPedestal + 0.6, dato.z)
                 });
 
                 verificarCarga(`Obra ${index + 1}: ${dato.titulo}`);
             }, undefined, (error) => {
                 console.error(` ERROR cargando ${dato.titulo}:`, error);
+                verificarCarga(`Fallo ${dato.titulo}`);
             });
         });
 
-        // 8. CONTROLES Y RAYCASTING
-        const controles = new OrbitControls(camara, renderer.domElement);
-        controles.enableDamping = true;
-        controles.dampingFactor = 0.05;
-        controles.maxDistance = 25; // Permitimos alejarnos más para ver las 10 obras
-        controles.maxPolarAngle = Math.PI / 2 - 0.05;
+        const teclas = { KeyW: false, KeyA: false, KeyS: false, KeyD: false };
+        let sprintActivo = false;
+        let obraActiva = null;
+        let obraTextoActiva = null;
 
-        const raycaster = new THREE.Raycaster();
-        const punteroMouse = new THREE.Vector2();
+        document.addEventListener('keydown', (e) => {
+            if (Object.prototype.hasOwnProperty.call(teclas, e.code)) {
+                teclas[e.code] = true;
+            }
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                sprintActivo = true;
+            }
+        });
 
-        window.addEventListener('mousemove', (evento) => {
-            punteroMouse.x = (evento.clientX / window.innerWidth) * 2 - 1;
-            punteroMouse.y = -(evento.clientY / window.innerHeight) * 2 + 1;
+        document.addEventListener('keyup', (e) => {
+            if (Object.prototype.hasOwnProperty.call(teclas, e.code)) {
+                teclas[e.code] = false;
+            }
+            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
+                sprintActivo = false;
+            }
         });
 
         const reloj = new THREE.Clock();
-        let currentHoveredObra = null;
 
-        function animar() {
-            requestAnimationFrame(animar);
-            controles.update();
-            const tiempo = reloj.getElapsedTime();
+        function iniciarAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-            raycaster.setFromCamera(punteroMouse, camara);
+                ambienteGain = audioContext.createGain();
+                ambienteGain.gain.value = 0.03;
+                ambienteGain.connect(audioContext.destination);
 
-            let meshesCargados = [];
-            obras.forEach(o => meshesCargados = meshesCargados.concat(o.meshes));
+                const ambienteOsc = audioContext.createOscillator();
+                ambienteOsc.type = 'triangle';
+                ambienteOsc.frequency.value = 66;
+                ambienteOsc.connect(ambienteGain);
+                ambienteOsc.start();
 
-            const intersecciones = raycaster.intersectObjects(meshesCargados);
-
-            let obraHovered = null;
-            if (intersecciones.length > 0) {
-                const meshTocado = intersecciones[0].object;
-                obraHovered = obras.find(o => o.meshes.includes(meshTocado));
+                pasosGain = audioContext.createGain();
+                pasosGain.gain.value = 0;
+                pasosGain.connect(audioContext.destination);
             }
 
-            if (obraHovered !== currentHoveredObra) {
-                currentHoveredObra = obraHovered;
-                if (currentHoveredObra) {
-                    crearTexto3D(currentHoveredObra);
-                } else {
-                    if (currentTextMesh) {
-                        currentTextMesh.geometry.dispose();
-                        currentTextMesh.material.dispose();
-                        escena.remove(currentTextMesh);
-                        currentTextMesh = null;
-                    }
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
+
+        function activarPasos(activo) {
+            if (!audioContext || !pasosGain) return;
+            const tiempo = audioContext.currentTime;
+            pasosGain.gain.cancelScheduledValues(tiempo);
+            pasosGain.gain.linearRampToValueAtTime(activo ? 0.06 : 0, tiempo + 0.08);
+        }
+
+        function reproducirPaso() {
+            if (!audioContext || !pasosGain) return;
+            const ruido = audioContext.createBufferSource();
+            const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.06, audioContext.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+                data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+            }
+
+            const filtro = audioContext.createBiquadFilter();
+            filtro.type = 'lowpass';
+            filtro.frequency.value = 450;
+
+            ruido.buffer = buffer;
+            ruido.connect(filtro);
+            filtro.connect(pasosGain);
+            ruido.start();
+        }
+
+        function colisionaConObstaculo(x, z) {
+            if (x < limites.minX || x > limites.maxX || z < limites.minZ || z > limites.maxZ) {
+                return true;
+            }
+
+            return obstaculos.some((obs) => {
+                const dx = x - obs.x;
+                const dz = z - obs.z;
+                const distancia = Math.hypot(dx, dz);
+                return distancia < (obs.radio + jugadorRadio);
+            });
+        }
+
+        function limitarJugador() {
+            const posicion = controlesFPS.getObject().position;
+            posicion.x = THREE.MathUtils.clamp(posicion.x, limites.minX, limites.maxX);
+            posicion.z = THREE.MathUtils.clamp(posicion.z, limites.minZ, limites.maxZ);
+            posicion.y = 1.7;
+        }
+
+        function moverJugador(delta) {
+            const velocidadBase = 5.2;
+            const multiplicadorSprint = sprintActivo ? 1.75 : 1;
+            const velocidad = velocidadBase * multiplicadorSprint;
+            const avance = (teclas.KeyW ? 1 : 0) - (teclas.KeyS ? 1 : 0);
+            const lateral = (teclas.KeyD ? 1 : 0) - (teclas.KeyA ? 1 : 0);
+            const enMovimiento = (avance !== 0 || lateral !== 0) && controlesFPS.isLocked;
+
+            activarPasos(enMovimiento);
+            if (enMovimiento && audioContext) {
+                pasosTimer -= delta;
+                const intervalo = sprintActivo ? 0.2 : 0.34;
+                if (pasosTimer <= 0) {
+                    reproducirPaso();
+                    pasosTimer = intervalo;
                 }
             }
 
-            // ANIMACIÓN INDIVIDUAL DE CADA OBRA
+            if (avance === 0 && lateral === 0) {
+                limitarJugador();
+                return;
+            }
+
+            const direccionFrontal = new THREE.Vector3();
+            camara.getWorldDirection(direccionFrontal);
+            direccionFrontal.y = 0;
+            direccionFrontal.normalize();
+
+            const direccionLateral = new THREE.Vector3().crossVectors(direccionFrontal, new THREE.Vector3(0, 1, 0)).normalize();
+            const movimiento = new THREE.Vector3();
+            movimiento.addScaledVector(direccionFrontal, avance);
+            movimiento.addScaledVector(direccionLateral, lateral);
+
+            if (movimiento.lengthSq() > 0) {
+                movimiento.normalize().multiplyScalar(velocidad * delta);
+            }
+
+            const objetoJugador = controlesFPS.getObject();
+            const origen = objetoJugador.position.clone();
+            const destino = origen.clone().add(movimiento);
+
+            if (!colisionaConObstaculo(destino.x, destino.z)) {
+                objetoJugador.position.copy(destino);
+            } else {
+                const slideX = new THREE.Vector3(origen.x + movimiento.x, origen.y, origen.z);
+                const slideZ = new THREE.Vector3(origen.x, origen.y, origen.z + movimiento.z);
+
+                if (!colisionaConObstaculo(slideX.x, slideX.z)) {
+                    objetoJugador.position.copy(slideX);
+                }
+                if (!colisionaConObstaculo(slideZ.x, slideZ.z)) {
+                    objetoJugador.position.copy(slideZ);
+                }
+            }
+
+            limitarJugador();
+        }
+
+        function actualizarProximidad() {
+            const posicionCamara = controlesFPS.getObject().position;
+            let masCercana = null;
+            let distanciaMinima = Infinity;
+
+            obras.forEach((obra) => {
+                const distancia = posicionCamara.distanceTo(obra.centro);
+                if (distancia < distanciaMinima) {
+                    distanciaMinima = distancia;
+                    masCercana = obra;
+                }
+            });
+
+            if (masCercana && distanciaMinima < 3.4) {
+                if (obraActiva !== masCercana) {
+                    obraActiva = masCercana;
+                    if (obraInfo && obraTitulo && obraDesc) {
+                        obraTitulo.textContent = masCercana.titulo;
+                        obraDesc.textContent = masCercana.desc;
+                        obraInfo.style.display = 'block';
+                    }
+                }
+
+                if (obraTextoActiva !== masCercana) {
+                    obraTextoActiva = masCercana;
+                    crearTexto3D(masCercana);
+                }
+            } else {
+                obraActiva = null;
+                obraTextoActiva = null;
+                if (obraInfo) {
+                    obraInfo.style.display = 'none';
+                }
+                if (currentTextMesh) {
+                    currentTextMesh.geometry.dispose();
+                    currentTextMesh.material.dispose();
+                    escena.remove(currentTextMesh);
+                    currentTextMesh = null;
+                }
+            }
+        }
+
+        function animar() {
+            requestAnimationFrame(animar);
+            const delta = reloj.getDelta();
+            moverJugador(delta);
+            actualizarProximidad();
+
             obras.forEach(obra => {
-                const esObraHovered = (obra === obraHovered);
+                const estaCerca = obra === obraActiva;
                 
-                if (esObraHovered) {
-                    // 1. RESALTARSE: Crece a un 120% de su tamaño original rápidamente
+                if (estaCerca) {
                     const escalaHover = obra.escalaOriginal.x * 1.2;
                     obra.modeloRef.scale.set(
                         THREE.MathUtils.lerp(obra.modeloRef.scale.x, escalaHover, 0.1),
                         THREE.MathUtils.lerp(obra.modeloRef.scale.y, escalaHover, 0.1),
                         THREE.MathUtils.lerp(obra.modeloRef.scale.z, escalaHover, 0.1)
                     );
-                    
-                    // 2. MOVERSE: Gira rápidamente (Efecto de giro de 360 grados)
-                    // Si quieres que gire más rápido, sube este número (ej. 0.1)
-                    obra.modeloRef.rotation.y += 0.06; 
+                    obra.modeloRef.rotation.y += 0.045;
                     
                 } else {
-                    // ESTADO NORMAL (Cuando quitas el mouse)
-                    // Vuelve a su tamaño original suavemente
                     obra.modeloRef.scale.set(
                         THREE.MathUtils.lerp(obra.modeloRef.scale.x, obra.escalaOriginal.x, 0.1),
                         THREE.MathUtils.lerp(obra.modeloRef.scale.y, obra.escalaOriginal.y, 0.1),
                         THREE.MathUtils.lerp(obra.modeloRef.scale.z, obra.escalaOriginal.z, 0.1)
                     );
-                    
-                    // Gira muy lento (modo exhibición de museo)
                     obra.modeloRef.rotation.y += 0.003;
                 }
             });
