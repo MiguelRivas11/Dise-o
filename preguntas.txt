@@ -1,0 +1,6 @@
+¿Qué fue lo más importante que aprendiste durante el desarrollo del proyecto?
+ a usar la libreria three.js para los modelos
+¿Qué dificultades encontraste y cómo las resolviste?
+la camara para poder hace qu eel mono se mueva de una meor manera y peeda dexplaxzarse por la sala
+¿Qué mejorarías o agregarías a tu proyecto?
+pintanturas a en los muros 
