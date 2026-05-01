@@ -122,7 +122,7 @@
         Cargando galeria 3D...
         <span id="carga-progreso">Cargando: 0 / 11 archivos</span>
     </div>
-    <div id="hud">Click en la escena para capturar mouse<br>W A S D para caminar</div>
+    <div id="hud">Click en la escena para capturar mouse<br>W A S D para caminar<br>Obras animadas: usa 1, 2 y 3 para cambiar de animación</div>
     <div id="crosshair"></div>
     <div id="obra-info">
         <h3 id="obra-titulo"></h3>
@@ -195,12 +195,84 @@
         alfombra.receiveShadow = true;
         escena.add(alfombra);
 
-        const paredIzquierda = new THREE.Mesh(new THREE.PlaneGeometry(82, 8), materialPared);
+        // Murales en paredes laterales: cargamos texturas desde la web (public domain o reemplazables)
+        function createPlaceholderTexture(label) {
+            const cw = 1024, ch = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = cw; canvas.height = ch;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#cfc4b3';
+            ctx.fillRect(0, 0, cw, ch);
+            ctx.fillStyle = '#8b6f4a';
+            ctx.fillRect(40, 40, cw - 80, ch - 80);
+            ctx.fillStyle = '#e9dfcc';
+            ctx.font = 'bold 64px serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, cw/2, ch/2 + 20);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.encoding = THREE.sRGBEncoding;
+            return tex;
+        }
+        // Preferir archivos locales dentro del proyecto (evita problemas CORS).
+        const muralLocalLeft = './assets/murals/left.jpg';
+        const muralLocalRight = './assets/murals/right.jpg';
+        // URLs remotas de respaldo (se usarán si no existen los locales)
+        const muralRemoteLeft = 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Leonardo_da_Vinci_-_Last_Supper_-_high_res.jpg';
+        const muralRemoteRight = 'https://upload.wikimedia.org/wikipedia/commons/2/22/Jacques-Louis_David_-_Napoleon_crossing_the_Alps_-_Google_Art_Project.jpg';
+
+        const textureLoader = new THREE.TextureLoader();
+
+        const muralMatLeft = new THREE.MeshStandardMaterial({ color: 0xe8ddca, roughness: 0.9, metalness: 0.03, side: THREE.DoubleSide });
+        const muralMatRight = new THREE.MeshStandardMaterial({ color: 0xe8ddca, roughness: 0.9, metalness: 0.03, side: THREE.DoubleSide });
+
+        // Cargar textura izquierda: primero intentamos local, si falla usamos la remota
+        textureLoader.crossOrigin = 'anonymous';
+        textureLoader.load(muralLocalLeft, (tex) => {
+            tex.colorSpace = THREE.SRGBColorSpace || tex.encoding; // compat shim
+            muralMatLeft.map = tex;
+            muralMatLeft.needsUpdate = true;
+            console.log('Mural izquierdo cargado (local)');
+        }, undefined, (errLocal) => {
+            console.warn('Mural local izquierdo no encontrado, intentando remoto:', muralLocalLeft, errLocal);
+            textureLoader.load(muralRemoteLeft, (tex2) => {
+                tex2.colorSpace = THREE.SRGBColorSpace || tex2.encoding;
+                muralMatLeft.map = tex2;
+                muralMatLeft.needsUpdate = true;
+                console.log('Mural izquierdo cargado (remoto)');
+            }, undefined, (errRemote) => {
+                console.warn('Fallo cargando mural izquierdo remoto:', muralRemoteLeft, errRemote);
+                muralMatLeft.map = createPlaceholderTexture('Mural Izquierdo');
+                muralMatLeft.needsUpdate = true;
+            });
+        });
+
+        // Cargar textura derecha
+        // Cargar textura derecha: primero intentamos local, si falla usamos la remota
+        textureLoader.load(muralLocalRight, (tex) => {
+            tex.colorSpace = THREE.SRGBColorSpace || tex.encoding;
+            muralMatRight.map = tex;
+            muralMatRight.needsUpdate = true;
+            console.log('Mural derecho cargado (local)');
+        }, undefined, (errLocalR) => {
+            console.warn('Mural local derecho no encontrado, intentando remoto:', muralLocalRight, errLocalR);
+            textureLoader.load(muralRemoteRight, (tex2) => {
+                tex2.colorSpace = THREE.SRGBColorSpace || tex2.encoding;
+                muralMatRight.map = tex2;
+                muralMatRight.needsUpdate = true;
+                console.log('Mural derecho cargado (remoto)');
+            }, undefined, (errRemoteR) => {
+                console.warn('Fallo cargando mural derecho remoto:', muralRemoteRight, errRemoteR);
+                muralMatRight.map = createPlaceholderTexture('Mural Derecho');
+                muralMatRight.needsUpdate = true;
+            });
+        });
+
+        const paredIzquierda = new THREE.Mesh(new THREE.PlaneGeometry(82, 8), muralMatLeft);
         paredIzquierda.position.set(-12.8, 4, -20);
         paredIzquierda.rotation.y = Math.PI / 2;
         escena.add(paredIzquierda);
 
-        const paredDerecha = new THREE.Mesh(new THREE.PlaneGeometry(82, 8), materialPared);
+        const paredDerecha = new THREE.Mesh(new THREE.PlaneGeometry(82, 8), muralMatRight);
         paredDerecha.position.set(12.8, 4, -20);
         paredDerecha.rotation.y = -Math.PI / 2;
         escena.add(paredDerecha);
@@ -439,7 +511,7 @@
             { url: './models/Duck.glb', x: -5.2, z: -10, escala: 1.0, yOffset: 1.0, titulo: 'Pato de Goma', desc: 'Objeto simple convertido en arte pop.' },
             { url: './models/WaterBottle.glb', x: 5.2, z: -10, escala: 5.0, yOffset: 1.0, titulo: 'Botella PBR', desc: 'Reflexion y refraccion realista.' },
             { url: './models/Corset.glb', x: -5.2, z: -18, escala: 20.0, yOffset: 1.0, titulo: 'Corse Historico', desc: 'Moda y estructura de otra epoca.' },
-            { url: './models/Fox.glb', x: 5.2, z: -18, escala: 0.02, yOffset: 1.0, titulo: 'Zorro Digital', desc: 'Figura estilizada en baja densidad.' },
+            { url: './models/foxx.glb', x: 5.2, z: -18, escala: 0.02, yOffset: 1.0, titulo: 'Zorro Digital', desc: 'Figura estilizada en baja densidad.' },
             { url: './models/Lantern.glb', x: -5.2, z: -26, escala: 0.08, yOffset: 1.0, titulo: 'Farol de Hierro', desc: 'Luz urbana antes de la electricidad.' },
             { url: './models/Avocado.glb', x: 5.2, z: -26, escala: 15.0, yOffset: 1.0, titulo: 'Aguacate Perfecto', desc: 'Practica de material fotorrealista.' }
         ];
@@ -473,6 +545,22 @@
         let ambienteGain = null;
         let pasosGain = null;
         let pasosTimer = 0;
+        function cambiarAnimacionObra(obra, indice) {
+            if (!obra || !obra.animacion || obra.animacion.clips.length === 0) return;
+
+            const { mixer, clips } = obra.animacion;
+            const nextIndex = (indice + clips.length) % clips.length;
+            const nextClip = clips[nextIndex];
+            const nextAction = mixer.clipAction(nextClip);
+
+            if (obra.animacion.activeAction && obra.animacion.activeAction !== nextAction) {
+                obra.animacion.activeAction.fadeOut(0.2);
+            }
+
+            nextAction.reset().fadeIn(0.2).play();
+            obra.animacion.activeAction = nextAction;
+            obra.animacion.activeIndex = nextIndex;
+        }
 
         function verificarCarga(nombreArchivo) {
             archivosCargados++;
@@ -507,8 +595,9 @@
 
             if (!loadedFont) return;
 
+            const textoAnimacion = obra.animacion ? '\n\nUsa 1, 2 y 3 para cambiar de animación.' : '';
             const textGeometry = new TextGeometry(
-                `${obra.titulo}\n\n${obra.desc}`,
+                `${obra.titulo}\n\n${obra.desc}${textoAnimacion}`,
                 {
                     font: loadedFont, size: 0.25, height: 0.05,
                     curveSegments: 12, bevelEnabled: true,
@@ -542,9 +631,24 @@
 
                 const bbox = new THREE.Box3().setFromObject(modelo);
                 const minY = bbox.min.y;
-                const ajusteY = (alturaPedestal + separacionModeloPedestal) - minY;
-                modelo.position.y += ajusteY;
+                let ajusteY = (alturaPedestal + separacionModeloPedestal) - minY;
 
+                // Sanity checks and clamping to avoid models placed far away
+                if (!isFinite(minY)) {
+                    console.warn('Caja vacía para', dato.url, '-> usando ajuste por defecto');
+                    ajusteY = alturaPedestal + separacionModeloPedestal;
+                }
+                if (Math.abs(ajusteY) > 10) {
+                    console.warn('ajusteY grande para', dato.url, 'valor:', ajusteY);
+                }
+                ajusteY = THREE.MathUtils.clamp(ajusteY, -10, 10);
+
+                modelo.position.y += ajusteY;
+                modelo.visible = true;
+
+                // (Removed CesiumMan-specific debug logging)
+
+                console.log(`Cargado modelo: ${dato.titulo}`, { index, url: dato.url, posicion: modelo.position, escala: dato.escala });
                 escena.add(modelo);
 
                 obras.push({
@@ -557,9 +661,20 @@
                     centro: new THREE.Vector3(dato.x, alturaPedestal + 0.6, dato.z)
                 });
 
+                if (gltf.animations && gltf.animations.length > 0) {
+                    obras[obras.length - 1].animacion = {
+                        mixer: new THREE.AnimationMixer(modelo),
+                        clips: gltf.animations,
+                        activeAction: null,
+                        activeIndex: 0
+                    };
+                    cambiarAnimacionObra(obras[obras.length - 1], 0);
+                }
+
                 verificarCarga(`Obra ${index + 1}: ${dato.titulo}`);
             }, undefined, (error) => {
-                console.error(` ERROR cargando ${dato.titulo}:`, error);
+                console.error(`ERROR cargando ${dato.titulo}:`, error && error.message ? error.message : error);
+                if (error && error.stack) console.error(error.stack);
                 verificarCarga(`Fallo ${dato.titulo}`);
             });
         });
@@ -575,6 +690,11 @@
             }
             if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
                 sprintActivo = true;
+            }
+            if (obraActiva && obraActiva.animacion) {
+                if (e.code === 'Digit1') cambiarAnimacionObra(obraActiva, 0);
+                if (e.code === 'Digit2') cambiarAnimacionObra(obraActiva, 1);
+                if (e.code === 'Digit3') cambiarAnimacionObra(obraActiva, 2);
             }
         });
 
@@ -735,7 +855,9 @@
                     obraActiva = masCercana;
                     if (obraInfo && obraTitulo && obraDesc) {
                         obraTitulo.textContent = masCercana.titulo;
-                        obraDesc.textContent = masCercana.desc;
+                        obraDesc.textContent = masCercana.animacion
+                            ? `${masCercana.desc} Usa 1, 2 y 3 para cambiar de animación.`
+                            : masCercana.desc;
                         obraInfo.style.display = 'block';
                     }
                 }
@@ -764,6 +886,12 @@
             const delta = reloj.getDelta();
             moverJugador(delta);
             actualizarProximidad();
+
+            obras.forEach((obra) => {
+                if (obra.animacion) {
+                    obra.animacion.mixer.update(delta);
+                }
+            });
 
             obras.forEach(obra => {
                 const estaCerca = obra === obraActiva;

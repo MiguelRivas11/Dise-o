@@ -1,6 +1,23 @@
-¿Qué fue lo más importante que aprendiste durante el desarrollo del proyecto?
- a usar la libreria three.js para los modelos
-¿Qué dificultades encontraste y cómo las resolviste?
-la camara para poder hace qu eel mono se mueva de una meor manera y peeda dexplaxzarse por la sala
-¿Qué mejorarías o agregarías a tu proyecto?
-pintanturas a en los muros 
+¿Qué es la animación esquelética y para qué se utiliza en Three.js? 
+Es una técnica donde un modelo (la "piel") se deforma mediante una jerarquía de huesos interconectados (esqueleto). En Three.js se utiliza para crear movimientos orgánicos y complejos, como personajes caminando o gesticulando, de forma eficiente.
+
+¿Qué diferencia hay entre una malla normal y un SkinnedMesh? 
+Una malla normal es una geometría rígida que se mueve como una sola pieza, mientras que un SkinnedMeshtiene "pesos" asignados a sus vértices, lo que permite que la geometría se doble y se deforme suavemente según el movimiento de los huesos.
+
+¿Cuáles son los pasos básicos para cargar y reproducir una animación esqueletal usando un archivo GLB?
+
+Cargar el archivo con GLTFLoader.
+
+Cree un AnimationMixervínculo al modelo cargado.
+
+Obtener el clip de animación desde gltf.animations.
+
+Crear una acción con mixer.clipAction(clip)y ejecutar .play().
+
+Actualizar el mezclador en el bucle de renderizado usando mixer.update(delta).
+
+¿Cómo se pueden mezclar varias animaciones al mismo tiempo? 
+Se logra ajustando el peso ( weight) de diferentes AnimationAction. El AnimationMixercombinará las influencias de cada animación activa (por ejemplo, 50% una animación de "correr" y 50% una de "herida") para calcular la posición final de los vértices.
+
+¿Cómo puedo animar manualmente un hueso específico del esqueleto en Three.js? 
+Debes buscar el hueso por su nombre dentro del objeto usando model.getObjectByName('nombre_del_hueso')y luego modificar directamente sus propiedades de transformación, como .rotation, .positiono .scale, dentro del loop de renderizado.

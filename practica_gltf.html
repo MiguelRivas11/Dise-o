@@ -4,12 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carga de Modelos GLTF | Miguel Rivas</title>
+    <title>Skeletal Animation | Miguel Rivas</title>
     <style>
+        :root {
+            color-scheme: dark;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
-            background: #0f172a;
+            background:
+                radial-gradient(circle at top, rgba(59, 130, 246, 0.22), transparent 40%),
+                radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.14), transparent 28%),
+                linear-gradient(180deg, #020617 0%, #0f172a 55%, #111827 100%);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
         canvas {
@@ -21,17 +29,94 @@
             top: 20px;
             right: 20px;
             padding: 10px 20px;
-            background: rgba(59, 130, 246, 0.8);
+            background: rgba(15, 23, 42, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.22);
             color: white;
             border-radius: 8px;
             text-decoration: none;
-            font-family: sans-serif;
             z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .panel {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            z-index: 10;
+            width: min(420px, calc(100vw - 40px));
+            padding: 18px 18px 16px;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.68);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            color: #e2e8f0;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 20px 80px rgba(2, 6, 23, 0.45);
+        }
+
+        .panel h1 {
+            margin: 0 0 6px;
+            font-size: 1.1rem;
+            letter-spacing: 0.02em;
+        }
+
+        .panel p {
+            margin: 0 0 12px;
+            color: #94a3b8;
+            line-height: 1.45;
+            font-size: 0.95rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .clip-btn {
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(30, 41, 59, 0.8);
+            color: #e2e8f0;
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+
+        .clip-btn:hover,
+        .clip-btn.active {
+            transform: translateY(-1px);
+            background: rgba(59, 130, 246, 0.24);
+            border-color: rgba(96, 165, 250, 0.7);
+        }
+
+        .status {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+
+        .status span {
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(2, 6, 23, 0.35);
+            border: 1px solid rgba(148, 163, 184, 0.12);
         }
     </style>
 </head>
 
 <body>
+    <section class="panel">
+        <h1>Skeletal animation</h1>
+        <p>Carga de <strong>foxx.glb</strong> con GLTFLoader, reproduccion de clips con AnimationMixer y cambio por teclado o botones.</p>
+        <div class="controls" id="clipButtons"></div>
+        <div class="status">
+            <span id="modelState">Cargando modelo...</span>
+            <span>Teclas: 1, 2, 3</span>
+        </div>
+    </section>
     <a href="index.html" class="back-btn">← Volver al Portafolio</a>
 
     <script type="importmap">
@@ -49,101 +134,194 @@
         import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
         import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
-        // 1. ESCENA Y CÁMARA
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0f172a);
+        scene.fog = new THREE.Fog(0x0f172a, 12, 28);
 
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 5); // Acercamos un poco la cámara
+        const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.7, 4.8);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setSize(window.innerWidth, window.innerHeight);
-
-        // Configuraciones de color para glTF
         renderer.outputEncoding = THREE.sRGBEncoding;
         renderer.physicallyCorrectLights = true;
         document.body.appendChild(renderer.domElement);
 
-        // 2. LUCES
-        const ambient = new THREE.AmbientLight(0xffffff, 1.5); // Luz más fuerte para ver las texturas
+        const ambient = new THREE.AmbientLight(0xffffff, 1.35);
         scene.add(ambient);
 
-        const sun = new THREE.DirectionalLight(0xffffff, 2);
-        sun.position.set(5, 10, 7);
-        scene.add(sun);
+        const keyLight = new THREE.DirectionalLight(0xfff4e5, 2.1);
+        keyLight.position.set(4, 8, 5);
+        scene.add(keyLight);
 
-        // 3. CARGA DEL MODELO
+        const fillLight = new THREE.DirectionalLight(0x93c5fd, 0.8);
+        fillLight.position.set(-4, 2, -3);
+        scene.add(fillLight);
+
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        rimLight.position.set(-2, 6, 6);
+        scene.add(rimLight);
+
+        const floor = new THREE.Mesh(
+            new THREE.CircleGeometry(8, 64),
+            new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.95, metalness: 0.0 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -0.01;
+        scene.add(floor);
+
+        const floorGlow = new THREE.Mesh(
+            new THREE.RingGeometry(1.2, 3.2, 96),
+            new THREE.MeshBasicMaterial({ color: 0x60a5fa, transparent: true, opacity: 0.08, side: THREE.DoubleSide })
+        );
+        floorGlow.rotation.x = -Math.PI / 2;
+        floorGlow.position.y = 0.005;
+        scene.add(floorGlow);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 1, 0);
+
         const loader = new GLTFLoader();
-        const loadedModels = [];
+        const clock = new THREE.Clock();
+        const modelState = document.getElementById('modelState');
+        const clipButtons = document.getElementById('clipButtons');
 
-        // Configuración apuntando a tu AnimatedCube
-        const configModels = [
-            {
-                path: './models/AnimatedCube.gltf',
-                x: -3, // Izquierda 
-                scale: 1.5
-            },
-            {
-                path: './models/AnisotropyBarnLamp.gltf',
-                x: 0,  // Centro
-                scale: 1.0 // Puedes subir o bajar este número si la lámpara se ve muy grande o pequeña
-            },
-            {
-                path: './models/AnimatedTriangle.gltf',
-                x: 3,  // Derecha
-                scale: 1.5
+        let mixer = null;
+        let foxRoot = null;
+        let activeAction = null;
+        let animationClips = [];
+
+        function labelForClip(clip, index) {
+            if (clip && clip.name) {
+                return clip.name;
             }
-        ];
 
-        configModels.forEach(data => {
-            loader.load(data.path, (gltf) => {
-                const model = gltf.scene;
+            const fallbackNames = ['Survey', 'Walk', 'Run'];
+            return fallbackNames[index] || `Clip ${index + 1}`;
+        }
 
-                model.position.x = data.x;
-                model.scale.set(data.scale, data.scale, data.scale);
+        function setActiveClip(index) {
+            if (!animationClips.length) {
+                return;
+            }
 
-                // --- TRAVERSE: Aquí es donde modificamos las propiedades internas ---
-                model.traverse((child) => {
+            const nextIndex = (index + animationClips.length) % animationClips.length;
+            const nextClip = animationClips[nextIndex];
+            const nextAction = mixer.clipAction(nextClip);
+
+            if (activeAction === nextAction) {
+                return;
+            }
+
+            if (activeAction) {
+                activeAction.fadeOut(0.2);
+            }
+
+            nextAction.reset().fadeIn(0.2).play();
+            activeAction = nextAction;
+
+            [...clipButtons.querySelectorAll('button')].forEach((button) => {
+                button.classList.toggle('active', Number(button.dataset.index) === nextIndex);
+            });
+
+            modelState.textContent = `Animacion activa: ${labelForClip(nextClip, nextIndex)}`;
+        }
+
+        function buildClipButtons() {
+            clipButtons.innerHTML = '';
+
+            animationClips.forEach((clip, index) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'clip-btn';
+                button.dataset.index = String(index);
+                button.textContent = labelForClip(clip, index);
+                button.addEventListener('click', () => setActiveClip(index));
+                clipButtons.appendChild(button);
+            });
+        }
+
+        loader.load(
+            './models/foxx.glb',
+            (gltf) => {
+                foxRoot = gltf.scene;
+                animationClips = gltf.animations || [];
+
+                foxRoot.traverse((child) => {
                     if (child.isMesh) {
-                        // Clonamos el material para personalizarlo sin romper el original
-                        child.material = child.material.clone();
-
-                        // Según tu archivo, este cubo no es metálico y es muy pulido (brillante)
-                        child.material.metalness = 0.0;
-                        child.material.roughness = 0.079;
-
-                        // Activamos sombras para mayor realismo
                         child.castShadow = true;
                         child.receiveShadow = true;
+
+                        if (child.material && child.material.isMaterial) {
+                            child.material = child.material.clone();
+                        }
                     }
                 });
 
-                scene.add(model);
-                loadedModels.push(model);
-                console.log("Cubo cargado con éxito");
-            },
-                undefined,
-                (error) => console.error("Error cargando el modelo:", error));
-        });
+                const bounds = new THREE.Box3().setFromObject(foxRoot);
+                const size = bounds.getSize(new THREE.Vector3());
+                const center = bounds.getCenter(new THREE.Vector3());
+                const maxDimension = Math.max(size.x, size.y, size.z);
+                const targetHeight = 2.2;
+                const scale = targetHeight / maxDimension;
 
-        // 4. CONTROLES Y ANIMACIÓN
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
+                foxRoot.position.x = -center.x;
+                foxRoot.position.z = -center.z;
+                foxRoot.position.y = -bounds.min.y;
+                foxRoot.scale.setScalar(scale);
+
+                scene.add(foxRoot);
+
+                mixer = new THREE.AnimationMixer(foxRoot);
+                buildClipButtons();
+
+                if (animationClips.length > 0) {
+                    setActiveClip(0);
+                } else {
+                    modelState.textContent = 'El modelo no contiene animaciones.';
+                }
+
+                camera.position.set(0, 1.75, 4.8);
+                controls.update();
+            },
+            undefined,
+            (error) => {
+                console.error('Error cargando el modelo:', error);
+                modelState.textContent = 'No se pudo cargar models/foxx.glb';
+            }
+        );
+
+        window.addEventListener('keydown', (event) => {
+            if (!animationClips.length) {
+                return;
+            }
+
+            if (event.key === '1') {
+                setActiveClip(0);
+            } else if (event.key === '2') {
+                setActiveClip(1);
+            } else if (event.key === '3') {
+                setActiveClip(2);
+            }
+        });
 
         function animate() {
             requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            if (mixer) {
+                mixer.update(delta);
+            }
+
             controls.update();
 
-            // Rotación manual (independiente de la animación interna del archivo)
-            loadedModels.forEach(m => {
-                m.rotation.y += 0.005;
-            });
+            floorGlow.rotation.z += delta * 0.25;
 
             renderer.render(scene, camera);
         }
         animate();
 
-        // 5. RESPONSIVIDAD
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
